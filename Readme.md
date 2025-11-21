@@ -39,14 +39,22 @@ Install:
 `hello.cpp`
 ```cpp
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+#include <vector>
 
-int add(int a, int b) {
-    return a + b;
+namespace py = pybind11;
+
+long long sum_of_squares(long long n) {
+    long long total = 0;
+    for (long long i = 0; i < n; i++) {
+        total += i * i;
+    }
+    return total;
 }
 
-PYBIND11_MODULE(hello, m) {
-    m.doc() = "Simple pybind11 test module";
-    m.def("add", &add, "Adds two integers");
+PYBIND11_MODULE(speed_test, m) {
+    m.doc() = "C++ speed test module";
+    m.def("sum_of_squares", &sum_of_squares, "Compute sum of squares from 0 to n-1");
 }
 ```
 
@@ -57,7 +65,7 @@ project(hello)
 
 find_package(pybind11 REQUIRED)
 
-pybind11_add_module(hello hello.cpp)
+pybind11_add_module(speed_test hello.cpp)
 ```
 
 ### 5. Build the Module
@@ -118,7 +126,7 @@ Then you can directly call this function in your python module.
 
 `script.py`
 ```python
-from cpp_package import hello
+from cpp_packages import speed_test
 
-print(hello.add(10, 20))
+print(speed_test.sum_of_squares(n = 1_000_000))
 ```
