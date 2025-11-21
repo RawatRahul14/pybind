@@ -1,0 +1,10 @@
+^C:\USERS\RAHUL\DESKTOP\PYBIND\BUILD\CMAKEFILES\A6ABBDA2BB156FF493F581258BE7C0CC\GENERATE.STAMP.RULE
+setlocal
+C:\mingw64\bin\cmake.exe -SC:/Users/rahul/Desktop/pybind -BC:/Users/rahul/Desktop/pybind/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/rahul/Desktop/pybind/build/hello.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
