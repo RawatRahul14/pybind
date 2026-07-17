@@ -7,7 +7,7 @@ In this setup, we install pybind11 via `pip`. The `CMakeLists.txt` file is confi
 
 The final result is a self-contained library:
 ```bash
-speed_test.cp311-win_amd64.pyd
+speed_test.pyd
 ```
 which behaves exactly like a normal Python module.
 
@@ -61,7 +61,7 @@ PYBIND11_MODULE(speed_test, m) {
 }
 ```
 
-`CMakeLists.txt` *(Updated for Auto-Detecting pip install)*
+`CMakeLists.txt` *(Updated for pybind11 v3 + .pyd Fix)*
 ```cmake
 cmake_minimum_required(VERSION 3.15)
 project(pybind_demo LANGUAGES CXX)
@@ -70,25 +70,42 @@ project(pybind_demo LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 1. Find the Python executable in your activated venv
-find_package(Python3 COMPONENTS Interpreter REQUIRED)
+# 1. Find the Python environment components
+find_package(Python3 COMPONENTS Interpreter Development.Module REQUIRED)
 
-# 2. Ask Python where the pip-installed pybind11 is located
+# 2. Extract the include directory path directly from pybind11
 execute_process(
-    COMMAND "${Python3_EXECUTABLE}" -m pybind11 --cmakedir
-    OUTPUT_VARIABLE pybind11_DIR
+    COMMAND "${Python3_EXECUTABLE}" -c "import pybind11; print(pybind11.get_include())"
+    OUTPUT_VARIABLE PYBIND11_INCLUDE_DIR
     OUTPUT_STRIP_TRAILING_WHITESPACE
+    COMMAND_ERROR_IS_FATAL ANY
 )
 
-# 3. Load pybind11 using the path we just found
-find_package(pybind11 REQUIRED)
+# 3. Create a standard C++ extension module target
+add_library(speed_test MODULE hello.cpp)
 
-# 4. Define your python module (this dictates the output .pyd name)
-pybind11_add_module(speed_test hello.cpp)
+# 4. Bind the required python and pybind11 include headers to your target
+target_include_directories(speed_test PRIVATE "${PYBIND11_INCLUDE_DIR}")
+target_link_libraries(speed_test PRIVATE Python3::Module)
+
+# 5. Force the extension to be .pyd explicitly so Python can recognize it
+set_target_properties(speed_test PROPERTIES 
+    PREFIX "" 
+    SUFFIX ".pyd"
+)
 ```
 
 ## 5. Build the Module
-Make sure your virtual environment is still activated (`.venv\Scripts\Activate`). 
+
+> [!IMPORTANT]
+> **Environment Requirement:** To run the build commands below, you **must use the Developer PowerShell for VS 2022** (or your respective Visual Studio version). Standard PowerShell or CMD windows will not have CMake or the MSVC compiler tools added to their environment paths.
+> 
+> Open your Windows Start Menu, search for **Developer PowerShell for VS 2022**, and use that terminal window to navigate back to your project directory before proceeding.
+
+Ensure your virtual environment is activated inside the Developer PowerShell window:
+```bash
+.venv\Scripts\Activate
+```
 
 Create the build folder and navigate into it:
 ```bash
@@ -96,9 +113,9 @@ mkdir build
 cd build
 ```
 
-> **Configure CMake using MSVC**
+**Configure CMake:**
 ```bash
-cmake -G "Visual Studio 17 2022" ..
+cmake ..
 ```
 
 **Build the project:**
@@ -108,7 +125,7 @@ cmake --build . --config Release
 
 The compiled C++ module will appear at:
 ```bash
-build/Release/speed_test.cp311-win_amd64.pyd
+build/Release/speed_test.pyd
 ```
 
 ## 6. Calling the C++ Module in Python
@@ -121,10 +138,10 @@ import sys
 from pathlib import Path
 
 # Folder where this __init__.py is located
-current_dir = Path(__file__).resolve().parent     # → pybind_demo/cpp_packages
+current_dir = Path(__file__).resolve().parent     # -> pybind_demo/cpp_packages
 
 # Project root = parent of cpp_packages
-project_root = current_dir.parent                 # → pybind_demo/
+project_root = current_dir.parent                 # -> pybind_demo/
 
 # Build/Release folder containing the .pyd file
 release_dir = project_root / "build" / "Release"
@@ -145,4 +162,3 @@ from cpp_packages import speed_test
 # Call the C++ function
 result = speed_test.sum_of_squares(1_000_000)
 print(f"Sum of squares: {result}")
-```
